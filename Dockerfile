@@ -1,61 +1,92 @@
-#Drupal
+FROM ubuntu:14.04
 
-FROM ubuntu
- 
-RUN	echo 'deb http://archive.ubuntu.com/ubuntu precise main universe' > /etc/apt/sources.list
-RUN	echo 'deb http://archive.ubuntu.com/ubuntu precise-updates universe' >> /etc/apt/sources.list
-RUN apt-get update
+Maintainer Luis Elizondo "lelizondo@gmail.com"
 
-#Prevent daemon start during install
+ENV DEBIAN_FRONTEND noninteractive
+
+# Update system
+RUN apt-get update && apt-get dist-upgrade -y
+
+# Ensure UTF-8
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
+
+# Install PHP
+RUN apt-get -y install php5-fpm php5-mysql php-apc php5-imap php5-mcrypt php5-curl php5-cli php5-gd php5-common php-pear curl php5-json php5-memcache
+
+# Install Nginx
+RUN apt-get -y install nginx
+
+# Install MySQL
+RUN apt-get -y install mysql-client mysql-server
+
+# Install Memcached
+RUN apt-get -y install memcached
+
+# Install Varnish
+RUN apt-get -y install varnish
+
+# Prevent daemon start during install
 RUN	echo '#!/bin/sh\nexit 101' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d
 
-#Supervisord
-RUN apt-get install -y supervisor && mkdir -p /var/log/supervisor
-CMD ["/usr/bin/supervisord", "-n"]
+# Install Supervisor
+RUN apt-get install -y supervisor 
+RUN mkdir -p /var/log/supervisor
 
-#SSHD
-RUN apt-get install -y openssh-server && mkdir /var/run/sshd && echo 'root:root' |chpasswd
+# Install SSHD
+RUN apt-get install -y openssh-server
+RUN mkdir /var/run/sshd && echo 'root:root' |chpasswd
 
-#Utilities
-RUN apt-get install -y vim less ntp net-tools inetutils-ping curl git
+# Install Utilities
+RUN apt-get install -y vim curl
 
-#All pkgs required by Drupal
-RUN apt-get -y install git mysql-client mysql-server apache2 libapache2-mod-php5 pwgen python-setuptools vim-tiny php5-mysql php-apc php5-gd php5-memcache memcached php-pear mc varnish
+# Install composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/
+RUN mv /usr/bin/composer.phar /usr/bin/composer
 
-#Drush
-RUN pear channel-discover pear.drush.org && pear install drush/drush
+# Install Drush using composer
+RUN composer global require drush/drush:dev-master
 
-#Install Drupal
-RUN rm -rf /var/www/ ; cd /var ; drush dl drupal ; mv /var/drupal*/ /var/www/
-RUN chmod a+w /var/www/sites/default ; mkdir /var/www/sites/default/files ; chown -R www-data:www-data /var/www/
+# Add Nginx file
+ADD ./config/default /etc/nginx/sites-available/default
 
-#Varnish
-ADD ./drupal.vcl /etc/varnish/drupal.vcl
-ADD ./status.php /var/www/status.php
+# Varnish
+ADD ./config/drupal.vcl /etc/varnish/drupal.vcl
+# ADD ./status.php /var/www/status.php
 
-#Cleanup agt-get to reduce disk
-RUN apt-get clean
+# Cleanup
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-#Configurations
+###
+### Configurations
+###
 
-#Apache
-RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/sites-available/default
-RUN a2enmod rewrite vhost_alias
-ENV APACHE_RUN_USER www-data
-ENV APACHE_RUN_GROUP www-data
-ENV APACHE_LOG_DIR /var/log/apache2
+# Supervisor starts everything
+ADD	./config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-#Supervisor starts everything
-ADD	./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-#MySql
+# Configure MySQL
 RUN sed -i -e"s/^bind-address\s*=\s*127.0.0.1/bind-address = 0.0.0.0/" /etc/mysql/my.cnf
-RUN supervisord & sleep 3 && mysql -e "CREATE DATABASE drupal; GRANT ALL ON drupal.* TO 'drupal'@'localhost';" && cd /var/www/ && drush site-install standard -y --account-name=admin --account-pass=admin --db-url="mysql://drupal@localhost:3306/drupal" && cd /var/www && drush dl varnish memcache && drush en varnish memcache memcache_admin -y && drush vset cache 1 && drush vset page_cache_maximum_age 3600 && drush vset varnish_version 3 && mysqladmin shutdown
 
-#Drupal Settings
-ADD ./settings.php.append /tmp/settings.php.append
+# Create database
+RUN mysqladmin -uroot -p root create drupal
+
+RUN drush vset cache 1 
+RUN drush vset page_cache_maximum_age 3600 
+RUN drush vset varnish_version 3 
+
+# Configure PHP RPM
+RUN sed -i 's/memory_limit = .*/memory_limit = 196M/' /etc/php5/fpm/php.ini
+
+# Drupal Settings
+ADD ./config/settings.php.append /tmp/settings.php.append
 RUN cat /tmp/settings.php.append >> /var/www/sites/default/settings.php
+RUN rm /tmp/settings.php.append
 
-EXPOSE 80 22 6081
+EXPOSE 80
+EXPOSE 22
+EXPOSE 3306
+EXPOSE 6081
 
-
+#Supervisord
+CMD ["/usr/bin/supervisord", "-n"]

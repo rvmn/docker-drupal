@@ -68,20 +68,17 @@ ADD	./config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Configure MySQL
 RUN sed -i -e"s/^bind-address\s*=\s*127.0.0.1/bind-address = 0.0.0.0/" /etc/mysql/my.cnf
 
-# Create database
-RUN mysqladmin -uroot -p root create drupal
-
-RUN drush vset cache 1 
-RUN drush vset page_cache_maximum_age 3600 
-RUN drush vset varnish_version 3 
+#RUN drush vset cache 1 
+#RUN drush vset page_cache_maximum_age 3600 
+#RUN drush vset varnish_version 3 
 
 # Configure PHP RPM
 RUN sed -i 's/memory_limit = .*/memory_limit = 196M/' /etc/php5/fpm/php.ini
 
 # Drupal Settings
-ADD ./config/settings.php.append /tmp/settings.php.append
-RUN cat /tmp/settings.php.append >> /var/www/sites/default/settings.php
-RUN rm /tmp/settings.php.append
+#ADD ./config/settings.php.append /tmp/settings.php.append
+#RUN cat /tmp/settings.php.append >> /var/www/sites/default/settings.php
+#RUN rm /tmp/settings.php.append
 
 EXPOSE 80
 EXPOSE 22

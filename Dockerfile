@@ -27,6 +27,9 @@ RUN apt-get -y install memcached
 # Install Varnish
 RUN apt-get -y install varnish
 
+# Install pwgen
+RUN apt-get -y install pwgen
+
 # Prevent daemon start during install
 RUN	echo '#!/bin/sh\nexit 101' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d
 
@@ -45,7 +48,8 @@ RUN apt-get install -y vim curl
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/
 RUN mv /usr/bin/composer.phar /usr/bin/composer
 
-# Install Drush using composer
+# Install Git and Drush using composer
+RUN apt-get install -y git
 RUN composer global require drush/drush:dev-master
 
 # Add Nginx file
@@ -53,7 +57,7 @@ ADD ./config/default /etc/nginx/sites-available/default
 
 # Varnish
 ADD ./config/drupal.vcl /etc/varnish/drupal.vcl
-# ADD ./status.php /var/www/status.php
+ADD ./config/status.php /opt/status.php
 
 # Cleanup
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -62,28 +66,26 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 ### Configurations
 ###
 
+# Add start.sh
+ADD ./config/start.sh /start.sh
+RUN chmod +x /start.sh
+
 # Supervisor starts everything
 ADD	./config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Configure MySQL
 RUN sed -i -e"s/^bind-address\s*=\s*127.0.0.1/bind-address = 0.0.0.0/" /etc/mysql/my.cnf
 
-#RUN drush vset cache 1 
-#RUN drush vset page_cache_maximum_age 3600 
-#RUN drush vset varnish_version 3 
-
 # Configure PHP RPM
 RUN sed -i 's/memory_limit = .*/memory_limit = 196M/' /etc/php5/fpm/php.ini
 
 # Drupal Settings
-#ADD ./config/settings.php.append /tmp/settings.php.append
-#RUN cat /tmp/settings.php.append >> /var/www/sites/default/settings.php
-#RUN rm /tmp/settings.php.append
+ADD ./config/settings.php.append /etc/settings.php.append
 
 EXPOSE 80
 EXPOSE 22
 EXPOSE 3306
 EXPOSE 6081
 
-#Supervisord
-CMD ["/usr/bin/supervisord", "-n"]
+# Supervisord
+CMD ["/start.sh"]

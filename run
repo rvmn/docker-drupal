@@ -1,19 +1,25 @@
 #!/bin/bash
+# default values
+por="49800"
+imag="drupal"
+nam=""
+applicatio="/var/www/"
+databas="/var/lib/mysql"
 
-echo "Port to use for web server:"
-read port
+read -p "Port to use [$por]:" port
+port=${port:-$imag}
 
-echo "Image name to use:"
-read image
+read -p "Name of the user [$nam]:" name
+name=${name:-$nam}
 
-echo "Name for the container:"
-read name
+read -p "Image name [$imag]:" image
+image=${image:-$imag}
 
-echo "Location of application files:"
-read application
+read -p "Location of application files [$]:" application
+application=${application:-$applicatio}
 
-echo "Location of database files:"
-read database
+read -p "Location of database files [$databas]:" database
+database=${database:-$databas}
 
 echo "Running container"
 echo "docker run -p $port:80 –p 49801:6081 -v $application:/var/www -v $database:/var/lib/mysql --name $name $image"

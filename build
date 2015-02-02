@@ -1,6 +1,9 @@
 #!/bin/bash
 
-echo "Image name:"
-read image
+# default values
+imag=drupal
+
+read -p "Image name [$imag]:" image
+image=${image:-$imag}
 
 docker build --tag=$image .

@@ -2,7 +2,7 @@
 # default values
 por="49800"
 imag="drupal"
-nam=""
+nam="rvmn"
 applicatio="/var/www/"
 databas="/var/lib/mysql"
 
@@ -22,6 +22,8 @@ read -p "Location of database files [$databas]:" database
 database=${database:-$databas}
 
 echo "Running container"
-echo "docker run -p $port:80 –p 49801:6081 -v $application:/var/www -v $database:/var/lib/mysql --name $name $image"
+echo "docker run -p $port:80 –p 49801:6081 -v $application:/var/www -v $database:/var/lib/mysql --name $name/$image"
+echo "docker run -p $port:80 –p 49801:6081 -v $application:/var/www -v $database:/var/lib/mysql --name $name/$image" | bash -l
+
 
 #docker run -d -p 8001:80 -p 8002:6081 -p 2221:22 -p 3306:3306 -v /Users/luis/Code/drupal:/var/www -v /Users/luis/Docker/dbdata:/var/lib/mysql luis/drupal

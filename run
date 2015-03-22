@@ -15,7 +15,7 @@ name=${name:-$nam}
 read -p "Image name [$imag]:" image
 image=${image:-$imag}
 
-read -p "Location of application files [$]:" application
+read -p "Location of application files [$applicatio]:" application
 application=${application:-$applicatio}
 
 read -p "Location of database files [$databas]:" database

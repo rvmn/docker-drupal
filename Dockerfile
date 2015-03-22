@@ -50,7 +50,8 @@ RUN mv /usr/bin/composer.phar /usr/bin/composer
 
 # Install Git and Drush using composer
 RUN apt-get install -y git
-RUN composer global require drush/drush:dev-master
+# RUN composer global require drush/drush:dev-master
+RUN wget http://ftp.drupal.org/files/projects/openpublish-7.x-1.0-beta2-core.tar.gz  -O - | tar -xz
 
 # Add Nginx file
 ADD ./config/default /etc/nginx/sites-available/default
